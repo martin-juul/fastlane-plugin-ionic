@@ -13,7 +13,7 @@ module Fastlane
         keystore_password:    'storePassword',
         key_password:         'password',
         keystore_alias:       'alias',
-        bundle:               'packageType',
+        android_package:      'packageType',
         build_number:         'versionCode',
         min_sdk_version:      'gradleArg=-PcdvMinSdkVersion',
         cordova_no_fetch:     'cordovaNoFetch'
@@ -153,12 +153,14 @@ module Fastlane
       end
 
       # export build paths (run step #3)
-      def self.set_build_paths(is_release)
-        app_name = self.get_app_name
+      def self.set_build_paths(is_release, android_package)
+        ios_app_name = self.get_app_name
         build_type = is_release ? 'release' : 'debug'
+        android_app_name = android_package == 'apk' ? 'app-#{build_type}' : 'app'
+        package_ext = android_package == 'apk' ? 'apk' : 'aab'
 
-        ENV['CORDOVA_ANDROID_RELEASE_BUILD_PATH'] = "./platforms/android/app/build/outputs/apk/#{build_type}/app-#{build_type}.apk"
-        ENV['CORDOVA_IOS_RELEASE_BUILD_PATH'] = "./platforms/ios/build/device/#{app_name}.ipa"
+        ENV['CORDOVA_ANDROID_RELEASE_BUILD_PATH'] = "./platforms/android/app/build/outputs/#{android_package}/#{build_type}/#{android_app_name}.#{package_ext}"
+        ENV['CORDOVA_IOS_RELEASE_BUILD_PATH'] = "./platforms/ios/build/device/#{ios_app_name}.ipa"
 
         # TODO: https://github.com/bamlab/fastlane-plugin-cordova/issues/7
         # TODO: Set env vars that gym and Co automatically use
@@ -167,7 +169,7 @@ module Fastlane
       def self.run(params)
         self.check_platform(params)
         self.build(params)
-        self.set_build_paths(params[:release])
+        self.set_build_paths(params[:release], params[:android_package])
       end
 
       #####################################################
@@ -259,9 +261,9 @@ module Fastlane
             default_value: ''
           ),
           FastlaneCore::ConfigItem.new(
-            key: :bundle,
-            env_name: "BUNDLE",
-            description: "Use bundle for android",
+            key: :android_package,
+            env_name: "ANDROID_PACKAGE",
+            description: "Type of android packaging (apk or bundle)",
             is_string: true,
             default_value: 'bundle'
           ),
