@@ -264,7 +264,7 @@ module Fastlane
             env_name: "BUNDLE",
             description: "Use bundle for android",
             is_string: false,
-            default_value: 'true'
+            default_value: true
           ),
           FastlaneCore::ConfigItem.new(
             key: :keystore_path,
