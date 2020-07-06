@@ -156,7 +156,7 @@ module Fastlane
       def self.set_build_paths(is_release, android_package)
         ios_app_name = self.get_app_name
         build_type = is_release ? 'release' : 'debug'
-        android_app_name = android_package == 'apk' ? 'app-#{build_type}' : 'app'
+        android_app_name = android_package == 'apk' ? "app-#{build_type}" : 'app'
         package_ext = android_package == 'apk' ? 'apk' : 'aab'
 
         ENV['CORDOVA_ANDROID_RELEASE_BUILD_PATH'] = "./platforms/android/app/build/outputs/#{android_package}/#{build_type}/#{android_app_name}.#{package_ext}"
