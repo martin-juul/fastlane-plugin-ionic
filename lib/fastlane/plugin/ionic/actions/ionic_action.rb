@@ -13,7 +13,7 @@ module Fastlane
         keystore_password:    'storePassword',
         key_password:         'password',
         keystore_alias:       'alias',
-        bundle:               'bundle',
+        bundle:               'packageType',
         build_number:         'versionCode',
         min_sdk_version:      'gradleArg=-PcdvMinSdkVersion',
         cordova_no_fetch:     'cordovaNoFetch'
@@ -110,7 +110,6 @@ module Fastlane
         args = [params[:release] ? '--release' : '--debug']
         args << '--device' if params[:device]
         args << '--prod' if params[:prod]
-        args << '--bundle' if params[:bundle]
         args << '--browserify' if params[:browserify]
         args << '--verbose' if params[:verbose]
 
@@ -263,8 +262,8 @@ module Fastlane
             key: :bundle,
             env_name: "BUNDLE",
             description: "Use bundle for android",
-            is_string: false,
-            default_value: true
+            is_string: true,
+            default_value: 'bundle'
           ),
           FastlaneCore::ConfigItem.new(
             key: :keystore_path,
