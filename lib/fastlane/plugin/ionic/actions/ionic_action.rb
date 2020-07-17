@@ -13,6 +13,7 @@ module Fastlane
         keystore_password:    'storePassword',
         key_password:         'password',
         keystore_alias:       'alias',
+        android_package:      'packageType',
         build_number:         'versionCode',
         min_sdk_version:      'gradleArg=-PcdvMinSdkVersion',
         cordova_no_fetch:     'cordovaNoFetch'
@@ -42,7 +43,7 @@ module Fastlane
           # handle all other cases
           else
             unless param_value.to_s.empty?
-              platform_args << "--#{cli_param}=#{param_value.shellescape}"
+              platform_args << "--#{cli_param}=#{param_value.to_s.shellescape}"
             end
           end
         end
@@ -79,11 +80,22 @@ module Fastlane
       # add platform if missing (run step #1)
       def self.check_platform(params)
         platform = params[:platform]
-        args = []
-        args << '--nofetch' if params[:cordova_no_fetch]
-        args << '--no-resources' if params[:cordova_no_resources]
         if platform && !File.directory?("./platforms/#{platform}")
-          sh "ionic cordova platform add #{platform} --no-interactive #{args.join(' ')}"
+          cmd = "ionic cordova platform add #{platform} --no-interactive"
+
+          if params[:cordova_no_fetch]
+            cmd << " --nofetch"
+          end
+
+          if params[:cordova_no_resources]
+            cmd << " --no-resources"
+          end
+
+          if !params[:project].to_s.empty?
+            cmd << " --project #{params[:project]}"
+          end
+
+          sh cmd
         end
       end
 
@@ -103,6 +115,14 @@ module Fastlane
 
         if !params[:cordova_build_config_file].to_s.empty?
           args << "--buildConfig=#{Shellwords.escape(params[:cordova_build_config_file])}"
+        end
+
+        if !params[:project].to_s.empty?
+          args << "--project #{params[:project]}"
+        end
+
+        if !params[:configuration].to_s.empty?
+          args << "--configuration=#{params[:configuration]}"
         end
 
         android_args = self.get_android_args(params) if params[:platform].to_s == 'android'
@@ -126,19 +146,21 @@ module Fastlane
         end
 
         if params[:platform].to_s == 'ios'
-          sh "ionic cordova compile #{params[:platform]} --no-interactive #{args.join(' ')} -- #{ios_args}" 
+          sh "ionic cordova compile #{params[:platform]} --no-interactive #{args.join(' ')} -- #{ios_args}"
         elsif params[:platform].to_s == 'android'
-          sh "ionic cordova compile #{params[:platform]} --no-interactive #{args.join(' ')} -- -- #{android_args}" 
+          sh "ionic cordova compile #{params[:platform]} --no-interactive #{args.join(' ')} -- -- #{android_args}"
         end
       end
 
       # export build paths (run step #3)
-      def self.set_build_paths(is_release)
-        app_name = self.get_app_name
+      def self.set_build_paths(is_release, android_package)
+        ios_app_name = self.get_app_name
         build_type = is_release ? 'release' : 'debug'
+        android_app_name = android_package == 'apk' ? "app-#{build_type}" : 'app'
+        package_ext = android_package == 'apk' ? 'apk' : 'aab'
 
-        ENV['CORDOVA_ANDROID_RELEASE_BUILD_PATH'] = "./platforms/android/app/build/outputs/apk/#{build_type}/app-#{build_type}.apk"
-        ENV['CORDOVA_IOS_RELEASE_BUILD_PATH'] = "./platforms/ios/build/device/#{app_name}.ipa"
+        ENV['CORDOVA_ANDROID_RELEASE_BUILD_PATH'] = "./platforms/android/app/build/outputs/#{android_package}/#{build_type}/#{android_app_name}.#{package_ext}"
+        ENV['CORDOVA_IOS_RELEASE_BUILD_PATH'] = "./platforms/ios/build/device/#{ios_app_name}.ipa"
 
         # TODO: https://github.com/bamlab/fastlane-plugin-cordova/issues/7
         # TODO: Set env vars that gym and Co automatically use
@@ -147,7 +169,7 @@ module Fastlane
       def self.run(params)
         self.check_platform(params)
         self.build(params)
-        self.set_build_paths(params[:release])
+        self.set_build_paths(params[:release], params[:android_package])
       end
 
       #####################################################
@@ -239,6 +261,13 @@ module Fastlane
             default_value: ''
           ),
           FastlaneCore::ConfigItem.new(
+            key: :android_package,
+            env_name: "ANDROID_PACKAGE",
+            description: "Type of android packaging (apk or bundle)",
+            is_string: true,
+            default_value: 'bundle'
+          ),
+          FastlaneCore::ConfigItem.new(
             key: :keystore_path,
             env_name: "CORDOVA_ANDROID_KEYSTORE_PATH",
             description: "Path to the Keystore for Android",
@@ -279,6 +308,20 @@ module Fastlane
             description: "Specifies whether to browserify build or not",
             default_value: false,
             is_string: false
+          ),
+          FastlaneCore::ConfigItem.new(
+              key: :project,
+              env_name: "CORDOVA_PROJECT",
+              description: "Specifies project in multi-projects monorepo, the project is looked up by key in the projects object",
+              default_value: '',
+              is_string: true
+          ),
+          FastlaneCore::ConfigItem.new(
+              key: :configuration,
+              env_name: "CORDOVA_CONFIGURATION",
+              description: "Specifies the configuration to use (for instance to manage environment in angular)",
+              default_value: '',
+              is_string: true
           ),
           FastlaneCore::ConfigItem.new(
             key: :cordova_prepare,
